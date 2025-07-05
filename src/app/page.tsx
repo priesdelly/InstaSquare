@@ -28,7 +28,7 @@ export default function Home() {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             const newImageSrc = URL.createObjectURL(file);
-            
+
             if (imageSrc) {
                 URL.revokeObjectURL(imageSrc);
             }
@@ -71,7 +71,14 @@ export default function Home() {
         ctx.drawImage(imageElementForCanvas, x, y);
 
         const link = document.createElement('a');
-        link.download = 'instasquare.png';
+        if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files[0]) {
+            const originalFileName = fileInputRef.current.files[0].name;
+            const fileExtension = originalFileName.split('.').pop() || 'png';
+            const fileNameWithoutExtension = originalFileName.replace(/\.[^/.]+$/, "");
+            link.download = `${fileNameWithoutExtension}-InstaSquare.${fileExtension}`;
+        } else {
+            link.download = 'InstaSquare.png';
+        }
         link.href = canvas.toDataURL('image/png');
         document.body.appendChild(link);
         link.click();
@@ -92,26 +99,26 @@ export default function Home() {
                         </CardHeader>
                         <CardContent className="p-0 flex-grow flex flex-col gap-6">
                             <div className="grid gap-3">
-                               <Label className="font-semibold text-foreground">1. Upload Image</Label>
-                               <Button id="upload-btn" onClick={handleUploadClick} variant="outline" className="w-full justify-start text-left">
+                                <Label className="font-semibold text-foreground">1. Upload Image</Label>
+                                <Button id="upload-btn" onClick={handleUploadClick} variant="outline" className="w-full justify-start text-left">
                                     <Upload className="mr-2 h-4 w-4" />
                                     Select an image from your device...
                                 </Button>
-                               <Input 
-                                    ref={fileInputRef} 
-                                    type="file" 
-                                    className="hidden" 
-                                    accept="image/*,image/heic,image/heif" 
+                                <Input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*,image/heic,image/heif"
                                     onChange={handleFileChange}
-                               />
+                                />
                             </div>
                             <div className="grid gap-3">
                                 <Label className="font-semibold text-foreground">2. Pick a Background Color</Label>
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
-                                        <Label htmlFor="color-input" 
-                                               className="block w-12 h-12 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105"
-                                               style={{ backgroundColor: bgColor }} />
+                                        <Label htmlFor="color-input"
+                                            className="block w-12 h-12 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105"
+                                            style={{ backgroundColor: bgColor }} />
                                         <Input
                                             id="color-input"
                                             type="color"
@@ -141,7 +148,7 @@ export default function Home() {
 
                     {/* Preview Panel */}
                     <div className="bg-muted/40 p-8 flex items-center justify-center">
-                         <div
+                        <div
                             className="relative w-full aspect-square rounded-xl shadow-inner overflow-hidden transition-colors duration-300"
                             style={{ backgroundColor: bgColor }}
                         >
