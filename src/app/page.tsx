@@ -144,7 +144,7 @@ export default function Home() {
                         >
                             {images.length > 0 ? (
                                 <ScrollArea className="h-full w-full">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+                                    <div className="grid grid-cols-1 gap-4 p-4">
                                         {images.map((image, index) => (
                                             <div key={index} className="relative w-full h-full flex items-center justify-center">
                                                 <img
