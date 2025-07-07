@@ -74,6 +74,11 @@ export default function Home() {
         });
     };
 
+    const handleClearImages = () => {
+        images.forEach(image => URL.revokeObjectURL(image.src));
+        setImages([]);
+    };
+
     return (
         <main className="flex flex-col items-center justify-center min-h-screen w-full bg-background p-4 sm:p-6 md:p-8">
             <Card className="w-full max-w-5xl shadow-xl rounded-2xl overflow-hidden">
@@ -109,7 +114,7 @@ export default function Home() {
                                         <Label htmlFor="color-input"
                                             className="block w-12 h-12 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105"
                                             style={{ backgroundColor: backgroundColor }} />
-                                        <Input 
+                                        <Input
                                             id="color-input"
                                             type="color"
                                             value={backgroundColor}
@@ -129,10 +134,16 @@ export default function Home() {
                             </div>
                         </CardContent>
                         <CardFooter className="p-0 mt-8">
-                            <Button onClick={handleDownload} disabled={images.length === 0} size="lg" className="w-full text-lg py-7">
-                                <Download className="mr-3 h-5 w-5" />
-                                Download Image
-                            </Button>
+                            <div className="grid grid-cols-1 gap-4 w-full">
+                                <Button onClick={handleDownload} disabled={images.length === 0} size="lg" className="w-full text-lg py-7">
+                                    <Download className="mr-3 h-5 w-5" />
+                                    Download Image
+                                </Button>
+                                <Button onClick={handleClearImages} disabled={images.length === 0} size="lg" variant="destructive" className="w-full text-lg py-7">
+                                    Clear All Images
+                                </Button>
+                            </div>
+
                         </CardFooter>
                     </div>
 
