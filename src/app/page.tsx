@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, type ChangeEvent } from 'react';
+import React, { useState, useRef, useEffect, type ChangeEvent, FormEvent } from 'react'; import Head from 'next/head';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,20 @@ import { Label } from '@/components/ui/label';
 import { Upload, Download } from 'lucide-react';
 
 export default function Home() {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loginError, setLoginError] = useState('');
+    const [loginAttempts, setLoginAttempts] = useState(0);
+    const [isLoginLocked, setIsLoginLocked] = useState(false);
+    const [lockTimer, setLockTimer] = useState<NodeJS.Timeout | null>(null);
+
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [imageElementForCanvas, setImageElementForCanvas] = useState<HTMLImageElement | null>(null);
     const [bgColor, setBgColor] = useState<string>('#ffb6c1'); // pale rose
+
+    const MAX_LOGIN_ATTEMPTS = 3;
+    const LOCK_DURATION = 60000; // 60 seconds
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,6 +34,40 @@ export default function Home() {
             }
         };
     }, [imageSrc]);
+
+    useEffect(() => {
+        if (isLoginLocked) {
+            const timer = setTimeout(() => {
+                setIsLoginLocked(false);
+                setLoginAttempts(0);
+                setLoginError('');
+            }, LOCK_DURATION);
+            setLockTimer(timer);
+        } else {
+            if (lockTimer) {
+                clearTimeout(lockTimer);
+                setLockTimer(null);
+            }
+        }
+        return () => {
+            if (lockTimer) {
+                clearTimeout(lockTimer);
+            }
+        };
+    }, [isLoginLocked]);
+
+    const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (username === 'admin' && password === 'P@ssw0rd') { // Hardcoded credentials
+            setIsAuthenticated(true);
+        } else {
+            setLoginAttempts(loginAttempts + 1);
+            setLoginError('Invalid username or password.');
+            if (loginAttempts + 1 >= MAX_LOGIN_ATTEMPTS) {
+                setIsLoginLocked(true);
+            }
+        }
+    };
 
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -86,92 +131,140 @@ export default function Home() {
     };
 
     return (
-        <main className="flex flex-col items-center justify-center min-h-screen w-full bg-background p-4 sm:p-6 md:p-8">
-            <Card className="w-full max-w-5xl shadow-xl rounded-2xl overflow-hidden">
-                <div className="grid md:grid-cols-2">
-                    {/* Controls Panel */}
-                    <div className="p-8 flex flex-col justify-center">
-                        <CardHeader className="p-0 mb-8">
-                            <CardTitle className="font-headline text-4xl font-bold tracking-tight text-foreground">InstaSquare</CardTitle>
-                            <CardDescription className="text-muted-foreground pt-2">
-                                Create perfect square-fit images for your social media profiles.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 flex-grow flex flex-col gap-6">
-                            <div className="grid gap-3">
-                                <Label className="font-semibold text-foreground">1. Upload Image</Label>
-                                <Button id="upload-btn" onClick={handleUploadClick} variant="outline" className="w-full justify-start text-left">
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Select an image from your device...
-                                </Button>
+        <main className="flex flex-col items-center justify-center min-h-screen w-full bg-background p-4 sm:p-6 md:p-8 overflow-auto">
+            {!isAuthenticated ? (
+                <Card className="w-full max-w-sm shadow-xl rounded-2xl p-6">
+                    <CardHeader className="text-center p-0 mb-6">
+                        <CardTitle className="font-headline text-3xl font-bold tracking-tight text-foreground">Login</CardTitle>
+                        <CardDescription className="text-muted-foreground pt-2">
+                            Enter your credentials to access InstaSquare.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <form onSubmit={handleLogin} className="grid gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="username">Username</Label>
                                 <Input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*,image/heic,image/heif"
-                                    onChange={handleFileChange}
+                                    id="username"
+                                    type="text"
+                                    placeholder="user"
+                                    required
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    disabled={isLoginLocked}
                                 />
                             </div>
-                            <div className="grid gap-3">
-                                <Label className="font-semibold text-foreground">2. Pick a Background Color</Label>
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <Label htmlFor="color-input"
-                                            className="block w-12 h-12 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105"
-                                            style={{ backgroundColor: bgColor }} />
-                                        <Input
-                                            id="color-input"
-                                            type="color"
-                                            value={bgColor}
-                                            onChange={(e) => setBgColor(e.target.value)}
-                                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
-                                            aria-label="Color Picker"
-                                        />
-                                    </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={isLoginLocked}
+                                />
+                            </div>
+                            {loginError && (
+                                <p className="text-sm text-destructive text-center">{loginError}</p>
+                            )}
+                            {isLoginLocked && (
+                                <p className="text-sm text-destructive text-center">Too many failed attempts. Please try again later.</p>
+                            )}
+                            <Button type="submit" className="w-full" disabled={isLoginLocked}>
+                                Login
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card className="w-full max-w-5xl shadow-xl rounded-2xl overflow-hidden">
+                    <div className="grid md:grid-cols-2">
+                        {/* Controls Panel */}
+                        <div className="p-8 flex flex-col justify-center">
+                            <CardHeader className="p-0 mb-8">
+                                <CardTitle className="font-headline text-4xl font-bold tracking-tight text-foreground">InstaSquare</CardTitle>
+                                <CardDescription className="text-muted-foreground pt-2">
+                                    Create perfect square-fit images for your social media profiles.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0 flex-grow flex flex-col gap-6">
+                                <div className="grid gap-3">
+                                    <Label className="font-semibold text-foreground">1. Upload Image</Label>
+                                    <Button id="upload-btn" onClick={handleUploadClick} variant="outline" className="w-full justify-start text-left">
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Select an image from your device...
+                                    </Button>
                                     <Input
-                                        type="text"
-                                        value={bgColor}
-                                        onChange={(e) => setBgColor(e.target.value)}
-                                        className="font-mono text-base h-12"
-                                        aria-label="Hex color value"
+                                        ref={fileInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        accept="image/*,image/heic,image/heif"
+                                        onChange={handleFileChange}
                                     />
                                 </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="p-0 mt-8">
-                            <Button onClick={handleDownload} disabled={!imageSrc} size="lg" className="w-full text-lg py-7">
-                                <Download className="mr-3 h-5 w-5" />
-                                Download Image
-                            </Button>
-                        </CardFooter>
-                    </div>
-
-                    {/* Preview Panel */}
-                    <div className="bg-muted/40 p-8 flex items-center justify-center">
-                        <div
-                            className="relative w-full aspect-square rounded-xl shadow-inner overflow-hidden transition-colors duration-300"
-                            style={{ backgroundColor: bgColor }}
-                        >
-                            {imageSrc ? (
-                                <img
-                                    src={imageSrc}
-                                    alt="Selected image preview"
-                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-full max-h-full transition-opacity duration-500 animate-in fade-in"
-                                />
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-center text-muted-foreground p-8">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <div className="p-4 bg-background/50 rounded-full">
-                                            <Upload className="h-10 w-10" />
+                                <div className="grid gap-3">
+                                    <Label className="font-semibold text-foreground">2. Pick a Background Color</Label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <Label htmlFor="color-input"
+                                                className="block w-12 h-12 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105"
+                                                style={{ backgroundColor: bgColor }} />
+                                            <Input
+                                                id="color-input"
+                                                type="color"
+                                                value={bgColor}
+                                                onChange={(e) => setBgColor(e.target.value)}
+                                                className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+                                                aria-label="Color Picker"
+                                            />
                                         </div>
-                                        <p className="font-medium">Your image preview will appear here</p>
+                                        <Input
+                                            value={bgColor}
+                                            onChange={(e) => setBgColor(e.target.value)}
+                                            type="text"
+                                            className="font-mono text-base h-12"
+                                            aria-label="Hex color value"
+                                        />
                                     </div>
                                 </div>
-                            )}
+                            </CardContent>
+                            <CardFooter className="p-0 mt-8">
+                                <Button onClick={handleDownload} disabled={!imageSrc} size="lg" className="w-full text-lg py-7">
+                                    <Download className="mr-3 h-5 w-5" />
+                                    Download Image
+                                </Button>
+                            </CardFooter>
+                        </div>
+
+                        {/* Preview Panel */}
+                        <div className="bg-muted/40 p-8 flex items-center justify-center">
+                            <div
+                                className="relative w-full aspect-square rounded-xl shadow-inner overflow-hidden transition-colors duration-300"
+                                style={{ backgroundColor: bgColor }}
+                            >
+                                {imageSrc ? (
+                                    <img
+                                        src={imageSrc}
+                                        alt="Selected image preview"
+                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 max-w-full max-h-full transition-opacity duration-500 animate-in fade-in"
+                                    />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-center text-muted-foreground p-8">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <div className="p-4 bg-background/50 rounded-full">
+                                                <Upload className="h-10 w-10" />
+                                            </div>
+                                            <p className="font-medium">Your image preview will appear here</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </Card>
+                </Card>
+            )}
             <canvas ref={canvasRef} className="hidden" aria-hidden="true"></canvas>
             <footer className="text-center mt-8 text-muted-foreground text-sm">
                 <p>Created with 💜 for awesome content creators.</p>
